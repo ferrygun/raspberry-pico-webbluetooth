@@ -2,25 +2,27 @@
 <html>
 <head>
   <title>Raspberry Pico Web Bluetooth Serial Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-family: Arial, sans-serif;
     }
 
     .container {
-      max-width: 500px;
-      margin: 0 auto;
+      max-width: 100%;
       padding: 20px;
     }
 
     .button {
-      display: inline-block;
+      display: block;
+      width: 100%;
       padding: 10px 20px;
       font-size: 16px;
       background-color: #4CAF50;
       color: #fff;
       border: none;
       cursor: pointer;
+      margin-bottom: 10px;
     }
 
     .button:hover {
@@ -34,6 +36,7 @@
       border: 1px solid #ccc;
       border-radius: 4px;
       box-sizing: border-box;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -42,12 +45,10 @@
     <h2>Raspberry Pico Web Bluetooth Serial Monitor</h2>
     <button id="connectButton" class="button" onclick="connectToDevice()">Connect</button>
     <button id="disconnectButton" class="button" onclick="disconnectFromDevice()" disabled>Disconnect</button>
-    <br><br>
     <div>
       <button class="button" onclick="sendCommand('left')">Left</button>
       <button class="button" onclick="sendCommand('right')">Right</button>
     </div>
-    <br>
     <pre id="log"></pre>
   </div>
 
