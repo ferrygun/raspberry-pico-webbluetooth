@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Raspberry Pico Web Bluetooth Serial Monitor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+
+    .button:hover {
+      background-color: #45a049;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Raspberry Pico Web Bluetooth Serial Monitor</h2>
+    <button id="connectButton" class="button" onclick="connectToDevice()">Connect</button>
+    <button id="disconnectButton" class="button" onclick="disconnectFromDevice()" disabled>Disconnect</button>
+    <br><br>
+    <div>
+      <button class="button" onclick="sendCommand('left')">Left</button>
+      <button class="button" onclick="sendCommand('right')">Right</button>
+    </div>
+    <br>
+    <pre id="log"></pre>
+  </div>
+
+  <script>
+    let device;
+    let logElement;
+    let writeCharacteristic;
+    let readCharacteristic;
+
+    function log(message) {
+      //logElement.innerHTML += message + '\n';
+    }
+
+    async function connectToDevice() {
+      try {
+        logElement = document.getElementById('log');
+        log('Requesting Bluetooth Device...');
+
+        if (device && device.gatt.connected) {
+          log('Already connected to ' + device.name);
+          return;
+        }
+
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ name: 'mpy-uart' }],
+          optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+        });
+
+        log('Connecting to GATT Server...');
+        const server = await device.gatt.connect();
+
+        log('Getting Serial Service...');
+        const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+
+        log('Getting Serial Port Write Characteristic...');
+        writeCharacteristic = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+
+        log('Getting Serial Port Read Characteristic...');
+        readCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+
+        log('Enabling notifications...');
+        await readCharacteristic.startNotifications();
+        readCharacteristic.addEventListener('characteristicvaluechanged', handleData);
+
+        device.ongattserverdisconnected = handleDisconnect; // Assigning the disconnect handler
+
+        log('Connected to ' + device.name);
+
+        document.getElementById('connectButton').disabled = true;
+        document.getElementById('disconnectButton').disabled = false;
+
+        // Add event listener for keydown events
+        document.addEventListener('keydown', handleKeyDown);
+      } catch (error) {
+        log('Error: ' + error);
+      }
+    }
+
+
+    function handleDisconnect() {
+      log('Connection lost. Device disconnected.');
+      document.getElementById('connectButton').disabled = false;
+      document.getElementById('disconnectButton').disabled = true;
+      alert('Connection lost. Device disconnected.');
+    }
+
+    function disconnectFromDevice() {
+      if (device && device.gatt.connected) {
+        device.gatt.disconnect();
+      }
+    }
+
+    function handleData(event) {
+      const value = event.target.value;
+      const decoder = new TextDecoder('utf-8');
+      const data = decoder.decode(value);
+      log('Received: ' + data);
+    }
+
+    async function sendMessage() {
+      try {
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value;
+        const encoder = new TextEncoder('utf-8');
+        const data = encoder.encode(message);
+        await writeCharacteristic.writeValue(data);
+        log('Sent: ' + message);
+        messageInput.value = '';
+      } catch (error) {
+        log('Error: ' + error);
+      }
+    }
+
+    async function sendCommand(command) {
+      try {
+        const message = command
+        const encoder = new TextEncoder('utf-8');
+        const data = encoder.encode(message);
+        await writeCharacteristic.writeValue(data);
+        log('Sent: ' + message);
+        messageInput.value = '';
+      } catch (error) {
+        log('Error: ' + error);
+      }
+    }
+
+    function handleKeyDown(event) {
+      // Check for left arrow key
+      if (event.keyCode === 37) {
+        sendCommand('LEFT');
+      }
+
+      // Check for right arrow key
+      if (event.keyCode === 39) {
+        sendCommand('RIGHT');
+      }
+    }
+  </script>
+</body>
+</html>
